@@ -1,0 +1,47 @@
+name: Compilar AnimStanceLE
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Baixar o Caprica (compilador Papyrus, ultima versao)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path tools/caprica | Out-Null
+          gh release download --repo Orvid/Caprica --pattern "*.zip" --dir tools/caprica --clobber
+          Get-ChildItem tools/caprica -Filter *.zip | ForEach-Object { Expand-Archive $_.FullName -DestinationPath tools/caprica -Force }
+          Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | ForEach-Object { Write-Host "Encontrado:" $_.FullName }
+
+      - name: Mostrar a ajuda do Caprica (para diagnostico)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = (Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | Select-Object -First 1).FullName
+          & $exe --help
+
+      - name: Compilar ASL_MCM.psc
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | Select-Object -First 1).FullName
+          New-Item -ItemType Directory -Force -Path build/Scripts | Out-Null
+          & $exe --game skyrim --import "Stubs;Source/Scripts" --output build/Scripts Source/Scripts/ASL_MCM.psc
+          if ($LASTEXITCODE -ne 0) { throw "O Caprica falhou (veja o texto acima)" }
+          Get-ChildItem build/Scripts
+
+      - name: Montar o zip do mod
+        shell: pwsh
+        run: python tools/package.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AnimStanceLE
+          path: dist/*.zip
