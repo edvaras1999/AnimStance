@@ -1,0 +1,5 @@
+*.esp binary
+*.pex binary
+*.hkx binary
+*.json text eol=lf
+*.psc text eol=lf
