@@ -1,4 +1,4 @@
-name: Compilar AnimStanceLE
+name: Build AnimStanceLE
 
 on:
   push:
@@ -11,33 +11,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Baixar o Caprica (compilador Papyrus, ultima versao)
+      # Caprica only publishes a .7z (no .zip), and newer builds are not releases at all.
+      # Pin v0.3.0 so a future release layout cannot break the build.
+      - name: Download Caprica (Papyrus compiler) v0.3.0
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force -Path tools/caprica | Out-Null
-          gh release download --repo Orvid/Caprica --pattern "*.zip" --dir tools/caprica --clobber
-          Get-ChildItem tools/caprica -Filter *.zip | ForEach-Object { Expand-Archive $_.FullName -DestinationPath tools/caprica -Force }
-          Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | ForEach-Object { Write-Host "Encontrado:" $_.FullName }
+          gh release download v0.3.0 --repo Orvid/Caprica --pattern "*.7z" --dir tools/caprica --clobber
+          Get-ChildItem tools/caprica
+          $sevenZip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
+          if (-not $sevenZip) { $sevenZip = "C:\Program Files\7-Zip\7z.exe" }
+          Get-ChildItem tools/caprica -Filter *.7z | ForEach-Object { & $sevenZip x $_.FullName "-otools/caprica" -y | Out-Null }
+          $exe = Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | Select-Object -First 1
+          if (-not $exe) { throw "Caprica.exe not found after extraction" }
+          Write-Host "Found:" $exe.FullName
 
-      - name: Mostrar a ajuda do Caprica (para diagnostico)
+      - name: Caprica help (diagnostics)
         shell: pwsh
         continue-on-error: true
         run: |
           $exe = (Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | Select-Object -First 1).FullName
           & $exe --help
 
-      - name: Compilar ASL_MCM.psc
+      # Caprica has a built-in flags file for Starfield only. For Skyrim the flags file must be passed
+      # (Stubs/TESV_Papyrus_Flags.flg). The exact path form it accepts is not documented, so try each form.
+      - name: Compile ASL_MCM.psc
         shell: pwsh
         run: |
           $exe = (Get-ChildItem tools/caprica -Recurse -Filter Caprica.exe | Select-Object -First 1).FullName
           New-Item -ItemType Directory -Force -Path build/Scripts | Out-Null
-          & $exe --game skyrim --import "Stubs;Source/Scripts" --output build/Scripts Source/Scripts/ASL_MCM.psc
-          if ($LASTEXITCODE -ne 0) { throw "O Caprica falhou (veja o texto acima)" }
+          Copy-Item Stubs/TESV_Papyrus_Flags.flg . -Force
+          $flagForms = @(
+            "TESV_Papyrus_Flags.flg",
+            "Stubs/TESV_Papyrus_Flags.flg",
+            (Resolve-Path "Stubs/TESV_Papyrus_Flags.flg").Path
+          )
+          $ok = $false
+          foreach ($f in $flagForms) {
+            Write-Host "=== Attempt: --flags $f"
+            Remove-Item build/Scripts/*.pex -ErrorAction SilentlyContinue
+            & $exe --game skyrim --flags $f --import "Stubs;Source/Scripts" --output build/Scripts Source/Scripts/ASL_MCM.psc
+            if ($LASTEXITCODE -eq 0 -and (Test-Path build/Scripts/ASL_MCM.pex)) { $ok = $true; Write-Host "OK with --flags $f"; break }
+          }
+          if (-not $ok) { throw "Caprica failed with every --flags form (see the output above)" }
           Get-ChildItem build/Scripts
 
-      - name: Montar o zip do mod
+      - name: Package the mod zip
         shell: pwsh
         run: python tools/package.py
 
@@ -45,3 +66,4 @@ jobs:
         with:
           name: AnimStanceLE
           path: dist/*.zip
+          if-no-files-found: error
