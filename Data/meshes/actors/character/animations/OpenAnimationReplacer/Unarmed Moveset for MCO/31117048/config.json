@@ -1,0 +1,35 @@
+{
+    "name": "Main",
+    "description": "",
+    "priority": 31117048,
+    "overrideAnimationsFolder": "",
+    "conditions": [
+        {
+            "Actor base": {
+                "pluginName": "Skyrim.esm",
+                "formID": "7"
+            },
+            "condition": "IsActorBase",
+            "requiredVersion": "1.0.0.0",
+            "negated": false
+        },
+        {
+            "Type": {
+                "value": 0
+            },
+            "Left hand": false,
+            "condition": "IsEquippedType",
+            "requiredVersion": "1.0.0.0",
+            "negated": false
+        },
+        {
+            "condition": "HasMagicEffect",
+            "requiredVersion": "1.0.0.0",
+            "Magic effect": {
+                "pluginName": "AnimStanceLE.esp",
+                "formID": "800"
+            },
+            "Active effects only": false
+        }
+    ]
+}

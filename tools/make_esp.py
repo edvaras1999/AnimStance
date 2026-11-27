@@ -1,6 +1,7 @@
-# Gerador do AnimStanceLE.esp (so para referencia; o .esp ja esta pronto em Data/)
+# Gerador do AnimStanceLE.esp: efeitos-marcador + habilidades-seletor (sem quest/MCM; o menu e o KHA-OS).
+# Uso: python tools/make_esp.py <pasta_de_saida> <qualquer>   (o 2o argumento e ignorado)
 import struct,json,zipfile,os,sys
-OUT=sys.argv[1]; A=sys.argv[2]
+OUT=sys.argv[1]
 PLUG="AnimStanceLE.esp"
 def z(s): return s.encode('cp1252')+b'\0'
 def sub(t,d): return t+struct.pack('<H',len(d))+d
@@ -35,15 +36,8 @@ mg=[];sp=[]
 for i,n in styles:
     mg.append(mgef(0x800+i-1,f'ASL_Unarmed_Sel{i}_FX',f'AnimStance {n}'))
     sp.append(spel(0x810+i-1,f'ASL_Unarmed_Sel{i}_Ability',f'AnimStance {n}',0x800+i-1))
-def wstr(t): b=t.encode('ascii'); return struct.pack('<H',len(b))+b
-def prop_obj(name,local): return wstr(name)+struct.pack('<BB',1,1)+struct.pack('<HhI',0,-1,fid(local))
-props=[('ASL_Unarmed_Sel1_Ability',0x810),('ASL_Unarmed_Sel2_Ability',0x811),('ASL_Unarmed_Sel3_Ability',0x812)]
-script=wstr('ASL_MCM')+struct.pack('<BH',0,len(props))+b''.join(prop_obj(n,l) for n,l in props)
-vmad=struct.pack('<hhH',5,2,1)+script+struct.pack('<bHHH',2,0,0,0)   # versao,formato,n scripts | fragmentos: 2,0 frags,"" | 0 aliases
-dnam=struct.pack('<HBBII',0x0101,0,0xFF,0,0)
-qust=rec(b'QUST',fid(0x820),[sub(b'EDID',z('ASL_Config')),sub(b'VMAD',vmad),sub(b'DNAM',dnam),sub(b'NEXT',b''),sub(b'ANAM',struct.pack('<I',0))])
-groups=[grp(b'MGEF',mg),grp(b'QUST',[qust]),grp(b'SPEL',sp)]
-nrec=len(mg)+len(sp)+1+3
+groups=[grp(b'MGEF',mg),grp(b'SPEL',sp)]
+nrec=len(mg)+len(sp)+2   # registos + 2 grupos (MGEF, SPEL)
 hedr=struct.pack('<fII',1.7,nrec,0x840)
 tes4_subs=[sub(b'HEDR',hedr),sub(b'CNAM',z('AnimStanceLE')),sub(b'SNAM',z('AnimStance LE - selector de animacoes')),sub(b'MAST',z('Skyrim.esm')),sub(b'DATA',b'\0'*8)]
 tes4=rec(b'TES4',0,tes4_subs)

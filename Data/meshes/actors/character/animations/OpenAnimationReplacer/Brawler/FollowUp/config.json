@@ -1,0 +1,54 @@
+{
+    "name": "FollowUp",
+    "priority": 8070055,
+    "conditions": [
+        {
+            "condition": "IsActorBase",
+            "requiredVersion": "1.0.0.0",
+            "Actor base": {
+                "pluginName": "Skyrim.esm",
+                "formID": "7"
+            }
+        },
+        {
+            "condition": "CompareValues",
+            "requiredVersion": "1.0.0.0",
+            "Value A": {
+                "form": {
+                    "pluginName": "NahIDWin.esp",
+                    "formID": "901"
+                }
+            },
+            "Comparison": "==",
+            "Value B": {
+                "value": 5.0
+            }
+        },
+        {
+            "condition": "IsEquippedType",
+            "requiredVersion": "1.0.0.0",
+            "Type": {
+                "value": 0.0
+            },
+            "Left hand": false
+        },
+        {
+            "condition": "IsInFaction",
+            "requiredVersion": "1.0.0.0",
+            "negated": true,
+            "Faction": {
+                "pluginName": "Skyrim.esm",
+                "formID": "4CFA6"
+            }
+        },
+        {
+            "condition": "HasMagicEffect",
+            "requiredVersion": "1.0.0.0",
+            "Magic effect": {
+                "pluginName": "AnimStanceLE.esp",
+                "formID": "801"
+            },
+            "Active effects only": false
+        }
+    ]
+}
